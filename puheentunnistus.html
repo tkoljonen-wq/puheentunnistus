@@ -504,8 +504,8 @@ h1 em {
 let recognition = null;
 let isRecording = false;
 let apiKey = '';
-let confirmedText = '';  // Vahvistetut final-tulokset
-let interimText = '';    // Reaaliaikainen väliaikainen teksti
+let confirmedText = '';
+let interimText = '';
 let correctionTimeout = null;
 let lastCorrected = '';
 
@@ -549,60 +549,56 @@ function updateDisplay() {
 
 function startRecognition() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  recognition = new SR();
-  recognition.lang = document.getElementById('langSelect').value;
-  recognition.interimResults = true;
-  recognition.continuous = true;  // Ei katkoksia tauoilla
+  const rec = new SR();
+  rec.lang = document.getElementById('langSelect').value;
+  rec.interimResults = true;
+  rec.continuous = false;
 
-  recognition.onresult = (event) => {
-    // Käydään VAIN uudet tulokset läpi resultIndex:stä — estää toiston
+  rec.onresult = (event) => {
+    // resultIndex:stä alkaen — ei koskaan toista vanhoja tuloksia
+    let newFinal = '';
+    let newInterim = '';
     for (let i = event.resultIndex; i < event.results.length; i++) {
-      const transcript = event.results[i][0].transcript.trim();
-      if (!transcript) continue;
-      if (event.results[i].isFinal) {
-        confirmedText = (confirmedText + ' ' + transcript).trim();
-        interimText = '';
-        // Käynnistä korjaus tauon jälkeen
-        if (confirmedText !== lastCorrected) {
-          clearTimeout(correctionTimeout);
-          correctionTimeout = setTimeout(() => correctWithClaude(confirmedText), 1800);
-        }
-      } else {
-        interimText = transcript;
+      const t = event.results[i][0].transcript.trim();
+      if (!t) continue;
+      if (event.results[i].isFinal) newFinal += (newFinal ? ' ' : '') + t;
+      else newInterim = t;
+    }
+    if (newFinal) {
+      confirmedText = (confirmedText + ' ' + newFinal).trim();
+      interimText = '';
+      if (confirmedText !== lastCorrected) {
+        clearTimeout(correctionTimeout);
+        correctionTimeout = setTimeout(() => correctWithClaude(confirmedText), 1800);
       }
+    } else {
+      interimText = newInterim;
     }
     updateDisplay();
   };
 
-  recognition.onerror = (e) => {
-    if (e.error === 'no-speech') return; // Hiljainen hetki — ei virhe
-    if (e.error === 'aborted') return;
+  rec.onerror = (e) => {
+    if (e.error === 'no-speech' || e.error === 'aborted') return;
     showToast('Mikrofonivirhe: ' + e.error);
-    stopRecognition();
+    isRecording = false; recognition = null; updateUI();
   };
 
-  recognition.onend = () => {
-    if (isRecording) { try { recognition.start(); } catch(e) {} }
+  rec.onend = () => {
+    recognition = null;
+    interimText = '';
+    if (isRecording) {
+      startRecognition(); // Välitön uudelleenkäynnistys
+    } else {
+      updateDisplay(); updateUI();
+      // Korjaus laukaistaan toggleRecording:ssa — ei täällä
+    }
   };
 
-  try {
-    recognition.start();
-  } catch(e) {
+  recognition = rec;
+  try { rec.start(); } catch(e) {
+    recognition = null;
     showToast('Mikrofonin käynnistys epäonnistui.');
     isRecording = false; updateUI();
-  }
-}
-
-function stopRecognition() {
-  isRecording = false;
-  if (recognition) { try { recognition.stop(); } catch(e) {} recognition = null; }
-  interimText = '';
-  updateDisplay();
-  updateUI();
-  // Laukaise lopullinen korjaus
-  if (confirmedText && confirmedText !== lastCorrected) {
-    clearTimeout(correctionTimeout);
-    correctWithClaude(confirmedText);
   }
 }
 
@@ -614,7 +610,14 @@ function updateUI() {
 
 function toggleRecording() {
   if (isRecording) {
-    stopRecognition();
+    isRecording = false;
+    if (recognition) { try { recognition.stop(); } catch(e) {} }
+    interimText = '';
+    updateDisplay(); updateUI();
+    if (confirmedText && confirmedText !== lastCorrected) {
+      clearTimeout(correctionTimeout);
+      correctWithClaude(confirmedText);
+    }
   } else {
     if (!checkBrowserSupport()) return;
     isRecording = true; updateUI();
@@ -667,10 +670,11 @@ function copyRaw() {
 }
 
 function clearAll() {
-  stopRecognition();
+  isRecording = false;
+  if (recognition) { try { recognition.stop(); } catch(e) {} recognition = null; }
   confirmedText = ''; interimText = ''; lastCorrected = '';
   clearTimeout(correctionTimeout);
-  const el = document.getElementById('rawText'); el.classList.add('empty'); el.textContent = 'Puhu mikrofoniin...';
+  updateDisplay(); updateUI();
   setCorrectedText('', false);
 }
 
@@ -680,11 +684,7 @@ function showToast(msg) {
 }
 
 document.getElementById('langSelect').addEventListener('change', () => {
-  if (isRecording && recognition) {
-    try { recognition.stop(); } catch(e) {}
-    recognition = null;
-    startRecognition();
-  }
+  if (isRecording && recognition) { try { recognition.stop(); } catch(e) {} }
 });
 </script>
 </body>
