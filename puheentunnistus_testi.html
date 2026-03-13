@@ -473,7 +473,14 @@ h1 em {
 <script>
 let recognition = null;
 let isRecording = false;
-let accumulatedRaw = '';
+let manualStop = false;
+let isStarting = false;
+let restartTimer = null;
+
+// Tekstin hallinta — sama logiikka kuin toimivassa sovelluksessa
+let baseText = '';
+let utteranceFinal = '';
+let utteranceInterim = '';
 
 function checkBrowserSupport() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -490,82 +497,166 @@ function checkBrowserSupport() {
 
 window.addEventListener('load', checkBrowserSupport);
 
-function setupRecognition() {
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  recognition = new SR();
-  recognition.continuous = true;
-  recognition.interimResults = true;
-  recognition.lang = document.getElementById('langSelect').value;
-
-  recognition.onresult = (event) => {
-    let interim = '';
-    let finalChunk = '';
-    for (let i = event.resultIndex; i < event.results.length; i++) {
-      const t = event.results[i][0].transcript;
-      if (event.results[i].isFinal) finalChunk += t + ' ';
-      else interim += t;
-    }
-    if (finalChunk) accumulatedRaw += finalChunk;
-    updateRawText(accumulatedRaw + interim);
-  };
-
-  recognition.onerror = (e) => {
-    if (e.error === 'no-speech' || e.error === 'aborted') return;
-    showToast('Mikrofonivirhe: ' + e.error);
-    stopRecording();
-  };
-
-  recognition.onend = () => {
-    if (isRecording) { try { recognition.start(); } catch(e) {} }
-  };
+function joinTexts(a, b) {
+  const left = (a || '').trim();
+  const right = (b || '').trim();
+  if (!left) return right;
+  if (!right) return left;
+  return left + ' ' + right;
 }
 
-function toggleRecording() {
-  isRecording ? stopRecording() : startRecording();
+function cleanText(text) {
+  return (text || '').replace(/\s*🔴.*$/, '').trim();
 }
 
-function startRecording() {
-  if (!checkBrowserSupport()) return;
-  setupRecognition();
-  try {
-    recognition.start();
-    isRecording = true;
-    document.getElementById('micBtn').classList.add('recording');
-    document.getElementById('micLabel').textContent = 'Kuuntelee... (paina lopettaaksesi)';
-    document.getElementById('waveform').classList.add('active');
-  } catch(e) {
-    showToast('Mikrofonin käynnistys epäonnistui.');
-  }
-}
-
-function stopRecording() {
-  isRecording = false;
-  if (recognition) recognition.stop();
-  document.getElementById('micBtn').classList.remove('recording');
-  document.getElementById('micLabel').textContent = 'Paina aloittaaksesi';
-  document.getElementById('waveform').classList.remove('active');
-}
-
-function updateRawText(text) {
+function updateDisplay() {
   const el = document.getElementById('rawText');
-  if (text && text.trim()) {
+  const preview = utteranceInterim ? ' 🔴 ' + utteranceInterim : '';
+  const full = (baseText + (utteranceFinal ? ' ' + utteranceFinal : '') + preview).trim();
+  if (full) {
     el.classList.remove('empty');
-    el.textContent = text;
+    el.textContent = full;
   } else {
     el.classList.add('empty');
     el.textContent = 'Puhu mikrofoniin...';
   }
 }
 
+function commitUtterance() {
+  const committed = joinTexts(baseText, utteranceFinal);
+  baseText = cleanText(committed);
+  utteranceFinal = '';
+  utteranceInterim = '';
+  updateDisplay();
+}
+
+function createRecognition() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const rec = new SR();
+  rec.lang = document.getElementById('langSelect').value;
+  rec.interimResults = true;
+  rec.continuous = false; // Tärkeä! false estää toiston
+
+  rec.onstart = () => { isStarting = false; };
+
+  rec.onresult = (event) => {
+    let finalText = '';
+    let interimText = '';
+    for (let i = 0; i < event.results.length; i++) {
+      const part = event.results[i][0].transcript.trim();
+      if (!part) continue;
+      if (event.results[i].isFinal) finalText += (finalText ? ' ' : '') + part;
+      else interimText += (interimText ? ' ' : '') + part;
+    }
+    utteranceFinal = finalText.trim();
+    utteranceInterim = interimText.trim();
+    updateDisplay();
+  };
+
+  rec.onerror = (e) => {
+    if (e.error !== 'aborted') showToast('Mikrofonivirhe: ' + e.error);
+    manualStop = true;
+    stopRecognitionOnly();
+    finishUI();
+  };
+
+  rec.onend = () => {
+    stopRecognitionOnly();
+    commitUtterance();
+
+    if (isRecording && !manualStop) {
+      // Käynnistä uudelleen automaattisesti
+      clearTimeout(restartTimer);
+      restartTimer = setTimeout(() => {
+        if (isRecording && !manualStop) startCycle();
+      }, 150);
+    } else {
+      finishUI();
+    }
+  };
+
+  return rec;
+}
+
+function startCycle() {
+  if (!checkBrowserSupport()) return;
+  if (isStarting) return;
+  clearTimeout(restartTimer);
+  stopRecognitionOnly();
+  recognition = createRecognition();
+  isStarting = true;
+  manualStop = false;
+  try {
+    recognition.start();
+  } catch(e) {
+    isStarting = false;
+    showToast('Mikrofonin käynnistys epäonnistui.');
+    finishUI();
+  }
+}
+
+function stopRecognitionOnly() {
+  if (recognition) {
+    const rec = recognition;
+    recognition = null;
+    try { rec.stop(); } catch(e) {}
+    try { rec.abort(); } catch(e) {}
+  }
+  isStarting = false;
+}
+
+function finishUI() {
+  clearTimeout(restartTimer);
+  isRecording = false;
+  manualStop = false;
+  isStarting = false;
+  // Siivoa 🔴-esikatselu pois
+  const el = document.getElementById('rawText');
+  if (!el.classList.contains('empty')) {
+    el.textContent = cleanText(el.textContent);
+  }
+  document.getElementById('micBtn').classList.remove('recording');
+  document.getElementById('micLabel').textContent = 'Paina aloittaaksesi';
+  document.getElementById('waveform').classList.remove('active');
+}
+
+function toggleRecording() {
+  if (isRecording) {
+    manualStop = true;
+    clearTimeout(restartTimer);
+    stopRecognitionOnly();
+    finishUI();
+  } else {
+    isRecording = true;
+    baseText = cleanText(document.getElementById('rawText').classList.contains('empty') ? '' : document.getElementById('rawText').textContent);
+    utteranceFinal = '';
+    utteranceInterim = '';
+    document.getElementById('micBtn').classList.add('recording');
+    document.getElementById('micLabel').textContent = 'Kuuntelee... (paina lopettaaksesi)';
+    document.getElementById('waveform').classList.add('active');
+    startCycle();
+  }
+}
+
 function copyRaw() {
-  if (!accumulatedRaw.trim()) { showToast('Ei tekstiä kopioitavaksi.'); return; }
-  navigator.clipboard.writeText(accumulatedRaw.trim()).then(() => showToast('✓ Teksti kopioitu!'));
+  const text = cleanText(document.getElementById('rawText').textContent);
+  if (!text || document.getElementById('rawText').classList.contains('empty')) {
+    showToast('Ei tekstiä kopioitavaksi.'); return;
+  }
+  navigator.clipboard.writeText(text).then(() => showToast('✓ Teksti kopioitu!'));
 }
 
 function clearAll() {
-  if (isRecording) stopRecording();
-  accumulatedRaw = '';
-  updateRawText('');
+  manualStop = true;
+  clearTimeout(restartTimer);
+  stopRecognitionOnly();
+  finishUI();
+  baseText = '';
+  utteranceFinal = '';
+  utteranceInterim = '';
+  const el = document.getElementById('rawText');
+  el.classList.add('empty');
+  el.textContent = 'Puhu mikrofoniin...';
 }
 
 function showToast(msg) {
@@ -576,7 +667,12 @@ function showToast(msg) {
 }
 
 document.getElementById('langSelect').addEventListener('change', () => {
-  if (isRecording) { stopRecording(); setTimeout(startRecording, 300); }
+  if (isRecording) {
+    manualStop = true;
+    stopRecognitionOnly();
+    manualStop = false;
+    setTimeout(startCycle, 300);
+  }
 });
 </script>
 </body>
