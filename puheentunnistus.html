@@ -366,6 +366,8 @@ h1 em {
   border: 1px solid var(--border);
 }
 
+.btn-correct { background: var(--text); color: var(--bg); border-color: var(--text); }
+.btn-correct:hover { background: #333; border-color: #333; }
 .btn-copy { background: var(--bg); color: var(--text); }
 .btn-copy:hover { background: var(--text); color: var(--bg); border-color: var(--text); }
 
@@ -548,6 +550,7 @@ h1 em {
     </div>
 
     <div class="actions">
+      <button class="btn btn-correct" onclick="correctWithClaude(document.getElementById('rawText').value)">✦ Korjaa teksti</button>
       <button class="btn btn-copy" onclick="copyText()">Kopioi korjattu</button>
       <button class="btn btn-copy" onclick="copyTranslated()" id="btnCopyTranslated" style="display:none;">Kopioi käännös</button>
       <button class="btn btn-copy" onclick="copyRaw()">Kopioi raaka</button>
