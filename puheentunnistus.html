@@ -717,11 +717,14 @@ function setCorrectedText(text, loading) {
 }
 
 async function translate(targetLang, btn) {
-  const sourceText = document.getElementById('correctedText').textContent;
-  if (!sourceText || document.getElementById('correctedText').classList.contains('empty')) {
+  const sourceEl = document.getElementById('correctedText');
+  const sourceText = sourceEl.textContent;
+  showToast('DEBUG: teksti="' + sourceText.substring(0,20) + '" empty=' + sourceEl.classList.contains('empty'));
+  if (!sourceText || sourceEl.classList.contains('empty')) {
     showToast('Ei tekstiä käännettäväksi.'); return;
   }
   if (!apiKey) { showToast('Lisää ensin Claude API-avain.'); return; }
+  showToast('DEBUG: apiKey ok, lang=' + targetLang);
 
   const langNames = { en: 'englanti', es: 'espanja', sv: 'ruotsi', ar: 'arabia' };
   const langNameFi = langNames[targetLang];
@@ -794,7 +797,7 @@ function clearAll() {
 
 function showToast(msg) {
   const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 3000);
+  setTimeout(() => t.classList.remove('show'), 6000);
 }
 
 document.getElementById('langSelect').addEventListener('change', () => {
