@@ -517,6 +517,7 @@ h1 em {
         <button class="btn-lang" onclick="translate('en')">🇬🇧 Englanti</button>
         <button class="btn-lang" onclick="translate('es')">🇪🇸 Espanja</button>
         <button class="btn-lang" onclick="translate('sv')">🇸🇪 Ruotsi</button>
+        <button class="btn-lang" onclick="translate('ar')">🇸🇦 Arabia</button>
       </div>
     </div>
 
@@ -715,7 +716,7 @@ async function translate(targetLang) {
   }
   if (!apiKey) { showToast('Lisää ensin Claude API-avain.'); return; }
 
-  const langNames = { en: 'englanti', es: 'espanja', sv: 'ruotsi' };
+  const langNames = { en: 'englanti', es: 'espanja', sv: 'ruotsi', ar: 'arabia' };
   const langNameFi = langNames[targetLang];
 
   // Merkitse aktiivinen kielinappi
