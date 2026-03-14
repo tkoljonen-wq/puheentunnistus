@@ -286,15 +286,28 @@ h1 em {
 
 .text-box {
   min-height: 80px;
+  width: 100%;
   font-family: 'DM Mono', monospace;
   font-size: 0.85rem;
   line-height: 1.7;
   color: var(--text);
   word-break: break-word;
   white-space: pre-wrap;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: vertical;
+  padding: 0;
 }
 
 .text-box.empty {
+  color: var(--muted);
+  font-style: italic;
+  opacity: 0.6;
+  font-size: 0.78rem;
+}
+
+.text-box::placeholder {
   color: var(--muted);
   font-style: italic;
   opacity: 0.6;
@@ -495,7 +508,7 @@ h1 em {
         <span class="section-label">Tunnistettu puhe</span>
         <span class="section-badge badge-raw">Raaka</span>
       </div>
-      <div class="text-box empty" id="rawText">Puhu mikrofoniin...</div>
+      <textarea class="text-box empty" id="rawText" placeholder="Puhu mikrofoniin tai liitä tekstiä tähän..."></textarea>
     </div>
 
     <div class="processing" id="processingIndicator">
@@ -508,7 +521,7 @@ h1 em {
         <span class="section-label">Korjattu teksti</span>
         <span class="section-badge badge-corrected">Claude AI</span>
       </div>
-      <div class="text-box empty" id="correctedText">Korjattu teksti ilmestyy tähän...</div>
+      <textarea class="text-box empty" id="correctedText" placeholder="Korjattu teksti ilmestyy tähän..."></textarea>
     </div>
 
     <div class="translation-bar" id="translationBar">
@@ -600,8 +613,8 @@ window.addEventListener('load', () => {
 function updateDisplay() {
   const el = document.getElementById('rawText');
   const full = (confirmedText + (interimText ? ' ' + interimText : '')).trim();
-  if (full) { el.classList.remove('empty'); el.textContent = full; }
-  else { el.classList.add('empty'); el.textContent = 'Puhu mikrofoniin...'; }
+  if (full) { el.classList.remove('empty'); el.value = full; }
+  else { el.classList.add('empty'); el.value = ''; }
 }
 
 function startRecognition() {
@@ -671,7 +684,9 @@ function toggleRecording() {
     }
     interimText = '';
     updateDisplay(); updateUI();
-    if (confirmedText.trim()) correctWithClaude(confirmedText);
+    // Lue textarea-arvo jotta manuaaliset muokkaukset huomioidaan
+    const rawVal = document.getElementById('rawText').value.trim();
+    if (rawVal) correctWithClaude(rawVal);
   } else {
     if (!checkBrowserSupport()) return;
     isRecording = true; updateUI();
@@ -707,19 +722,18 @@ async function correctWithClaude(rawText) {
 
 function setCorrectedText(text, loading) {
   const el = document.getElementById('correctedText');
-  if (loading) { el.classList.add('empty'); el.textContent = 'Korjataan...'; }
+  if (loading) { el.classList.add('empty'); el.value = ''; el.placeholder = 'Korjataan...'; }
   else if (text && text.trim()) {
-    el.classList.remove('empty'); el.textContent = text;
-    // Näytä käännöspalkki kun korjattu teksti on valmis
+    el.classList.remove('empty'); el.value = text; el.placeholder = '';
     document.getElementById('translationBar').classList.add('visible');
   }
-  else { el.classList.add('empty'); el.textContent = 'Korjattu teksti ilmestyy tähän...'; }
+  else { el.classList.add('empty'); el.value = ''; el.placeholder = 'Korjattu teksti ilmestyy tähän...'; }
 }
 
 async function kaanna(targetLang, btn) {
   const sourceEl = document.getElementById('correctedText');
-  const sourceText = sourceEl.textContent;
-  if (!sourceText || sourceEl.classList.contains('empty')) {
+  const sourceText = sourceEl.value.trim();
+  if (!sourceText) {
     showToast('Ei tekstiä käännettäväksi.'); return;
   }
   if (!apiKey) { showToast('Lisää ensin Claude API-avain.'); return; }
@@ -762,14 +776,15 @@ async function kaanna(targetLang, btn) {
 }
 
 function copyText() {
-  const el = document.getElementById('correctedText');
-  if (el.classList.contains('empty')) { showToast('Ei korjattua tekstiä kopioitavaksi.'); return; }
-  navigator.clipboard.writeText(el.textContent).then(() => showToast('✓ Korjattu teksti kopioitu!'));
+  const val = document.getElementById('correctedText').value.trim();
+  if (!val) { showToast('Ei korjattua tekstiä kopioitavaksi.'); return; }
+  navigator.clipboard.writeText(val).then(() => showToast('✓ Korjattu teksti kopioitu!'));
 }
 
 function copyRaw() {
-  if (!confirmedText.trim()) { showToast('Ei raakatekstiä kopioitavaksi.'); return; }
-  navigator.clipboard.writeText(confirmedText.trim()).then(() => showToast('✓ Raakateksti kopioitu!'));
+  const val = document.getElementById('rawText').value.trim();
+  if (!val) { showToast('Ei raakatekstiä kopioitavaksi.'); return; }
+  navigator.clipboard.writeText(val).then(() => showToast('✓ Raakateksti kopioitu!'));
 }
 
 function copyTranslated() {
@@ -780,17 +795,18 @@ function copyTranslated() {
 
 function clearAll() {
   isRecording = false;
-  if (recognition) { try { recognition.stop(); } catch(e) {} recognition = null; }
+  if (recognition) { const r = recognition; recognition = null; try { r.stop(); } catch(e) {} }
   confirmedText = ''; interimText = '';
-  updateDisplay(); updateUI();
+  const raw = document.getElementById('rawText');
+  raw.value = ''; raw.classList.add('empty');
   setCorrectedText('', false);
-  // Nollaa käännös
   document.getElementById('translationBar').classList.remove('visible');
   document.getElementById('translationSection').style.display = 'none';
   document.getElementById('translatedText').textContent = '';
   document.getElementById('translatedText').classList.add('empty');
   document.getElementById('btnCopyTranslated').style.display = 'none';
   document.querySelectorAll('.btn-lang').forEach(b => b.classList.remove('active'));
+  updateUI();
 }
 
 function showToast(msg) {
