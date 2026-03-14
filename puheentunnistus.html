@@ -406,6 +406,38 @@ h1 em {
 
 .toast.show { transform: translateX(-50%) translateY(0); }
 
+.translation-bar {
+  display: none;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.9rem 1.5rem;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+  flex-wrap: wrap;
+}
+
+.translation-bar.visible { display: flex; }
+
+.trans-btns { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+
+.btn-lang {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  padding: 0.4rem 0.75rem;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-lang:hover { background: #4a90e2; color: #fff; border-color: #4a90e2; }
+.btn-lang:active { transform: scale(0.96); }
+.btn-lang.active { background: #4a90e2; color: #fff; border-color: #4a90e2; }
+
 .footer-note {
   margin-top: 1.5rem;
   font-size: 0.65rem;
@@ -479,8 +511,31 @@ h1 em {
       <div class="text-box empty" id="correctedText">Korjattu teksti ilmestyy tähän...</div>
     </div>
 
+    <div class="translation-bar" id="translationBar">
+      <span class="section-label" style="font-size:0.68rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);">Käännä</span>
+      <div class="trans-btns">
+        <button class="btn-lang" onclick="translate('en')">🇬🇧 Englanti</button>
+        <button class="btn-lang" onclick="translate('es')">🇪🇸 Espanja</button>
+        <button class="btn-lang" onclick="translate('sv')">🇸🇪 Ruotsi</button>
+      </div>
+    </div>
+
+    <div class="processing" id="translatingIndicator">
+      <div class="dot-loader"><span></span><span></span><span></span></div>
+      Claude kääntää...
+    </div>
+
+    <div class="text-section" id="translationSection" style="display:none;">
+      <div class="section-header">
+        <span class="section-label">Käännös</span>
+        <span class="section-badge" id="translationBadge" style="background:rgba(74,144,226,0.12);color:#4a90e2;">—</span>
+      </div>
+      <div class="text-box empty" id="translatedText">Käännetty teksti ilmestyy tähän...</div>
+    </div>
+
     <div class="actions">
       <button class="btn btn-copy" onclick="copyText()">Kopioi korjattu</button>
+      <button class="btn btn-copy" onclick="copyTranslated()" id="btnCopyTranslated" style="display:none;">Kopioi käännös</button>
       <button class="btn btn-copy" onclick="copyRaw()">Kopioi raaka</button>
       <button class="btn btn-clear" onclick="clearAll()">Tyhjennä</button>
       <select class="lang-select" id="langSelect" title="Puhumisen kieli">
@@ -645,8 +700,56 @@ async function correctWithClaude(rawText) {
 function setCorrectedText(text, loading) {
   const el = document.getElementById('correctedText');
   if (loading) { el.classList.add('empty'); el.textContent = 'Korjataan...'; }
-  else if (text && text.trim()) { el.classList.remove('empty'); el.textContent = text; }
+  else if (text && text.trim()) {
+    el.classList.remove('empty'); el.textContent = text;
+    // Näytä käännöspalkki kun korjattu teksti on valmis
+    document.getElementById('translationBar').classList.add('visible');
+  }
   else { el.classList.add('empty'); el.textContent = 'Korjattu teksti ilmestyy tähän...'; }
+}
+
+async function translate(targetLang) {
+  const sourceText = document.getElementById('correctedText').textContent;
+  if (!sourceText || document.getElementById('correctedText').classList.contains('empty')) {
+    showToast('Ei tekstiä käännettäväksi.'); return;
+  }
+  if (!apiKey) { showToast('Lisää ensin Claude API-avain.'); return; }
+
+  const langNames = { en: 'englanti', es: 'espanja', sv: 'ruotsi' };
+  const langNameFi = langNames[targetLang];
+
+  // Merkitse aktiivinen kielinappi
+  document.querySelectorAll('.btn-lang').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+
+  document.getElementById('translatingIndicator').classList.add('visible');
+  document.getElementById('translationSection').style.display = 'none';
+  document.getElementById('btnCopyTranslated').style.display = 'none';
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: `Olet kääntäjä. Käännä teksti ${langNameFi}ksi. Säilytä tyyli ja merkitys tarkasti. Vastaa VAIN käännöksellä, ei selityksiä.`,
+        messages: [{ role: 'user', content: sourceText }]
+      })
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const translated = data.content?.[0]?.text || '';
+    const el = document.getElementById('translatedText');
+    el.classList.remove('empty'); el.textContent = translated;
+    document.getElementById('translationBadge').textContent = langNameFi.charAt(0).toUpperCase() + langNameFi.slice(1);
+    document.getElementById('translationSection').style.display = 'block';
+    document.getElementById('btnCopyTranslated').style.display = '';
+  } catch(err) {
+    showToast('Käännösvirhe: ' + (err.message || 'tuntematon virhe'));
+  } finally {
+    document.getElementById('translatingIndicator').classList.remove('visible');
+  }
 }
 
 function copyText() {
@@ -660,12 +763,25 @@ function copyRaw() {
   navigator.clipboard.writeText(confirmedText.trim()).then(() => showToast('✓ Raakateksti kopioitu!'));
 }
 
+function copyTranslated() {
+  const el = document.getElementById('translatedText');
+  if (!el.textContent.trim() || el.classList.contains('empty')) { showToast('Ei käännöstä kopioitavaksi.'); return; }
+  navigator.clipboard.writeText(el.textContent.trim()).then(() => showToast('✓ Käännös kopioitu!'));
+}
+
 function clearAll() {
   isRecording = false;
   if (recognition) { try { recognition.stop(); } catch(e) {} recognition = null; }
   confirmedText = ''; interimText = '';
   updateDisplay(); updateUI();
   setCorrectedText('', false);
+  // Nollaa käännös
+  document.getElementById('translationBar').classList.remove('visible');
+  document.getElementById('translationSection').style.display = 'none';
+  document.getElementById('translatedText').textContent = '';
+  document.getElementById('translatedText').classList.add('empty');
+  document.getElementById('btnCopyTranslated').style.display = 'none';
+  document.querySelectorAll('.btn-lang').forEach(b => b.classList.remove('active'));
 }
 
 function showToast(msg) {
