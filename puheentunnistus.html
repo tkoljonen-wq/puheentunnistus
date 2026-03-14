@@ -506,8 +506,6 @@ let isRecording = false;
 let apiKey = '';
 let confirmedText = '';
 let interimText = '';
-let correctionTimeout = null;
-let lastCorrected = '';
 
 function checkBrowserSupport() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -567,10 +565,6 @@ function startRecognition() {
     if (newFinal) {
       confirmedText = (confirmedText + ' ' + newFinal).trim();
       interimText = '';
-      if (confirmedText !== lastCorrected) {
-        clearTimeout(correctionTimeout);
-        correctionTimeout = setTimeout(() => correctWithClaude(confirmedText), 1800);
-      }
     } else {
       interimText = newInterim;
     }
@@ -614,10 +608,7 @@ function toggleRecording() {
     if (recognition) { try { recognition.stop(); } catch(e) {} }
     interimText = '';
     updateDisplay(); updateUI();
-    if (confirmedText && confirmedText !== lastCorrected) {
-      clearTimeout(correctionTimeout);
-      correctWithClaude(confirmedText);
-    }
+    correctWithClaude(confirmedText);
   } else {
     if (!checkBrowserSupport()) return;
     isRecording = true; updateUI();
@@ -672,8 +663,7 @@ function copyRaw() {
 function clearAll() {
   isRecording = false;
   if (recognition) { try { recognition.stop(); } catch(e) {} recognition = null; }
-  confirmedText = ''; interimText = ''; lastCorrected = '';
-  clearTimeout(correctionTimeout);
+  confirmedText = ''; interimText = '';
   updateDisplay(); updateUI();
   setCorrectedText('', false);
 }
