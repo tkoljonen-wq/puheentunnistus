@@ -664,10 +664,14 @@ function updateUI() {
 function toggleRecording() {
   if (isRecording) {
     isRecording = false;
-    if (recognition) { try { recognition.stop(); } catch(e) {} }
+    if (recognition) {
+      const rec = recognition;
+      recognition = null; // Nollataan ensin jotta onend ei käynnistä uudelleen
+      try { rec.stop(); } catch(e) {}
+    }
     interimText = '';
     updateDisplay(); updateUI();
-    correctWithClaude(confirmedText);
+    if (confirmedText.trim()) correctWithClaude(confirmedText);
   } else {
     if (!checkBrowserSupport()) return;
     isRecording = true; updateUI();
