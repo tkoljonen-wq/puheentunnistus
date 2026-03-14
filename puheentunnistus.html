@@ -544,6 +544,8 @@ h1 em {
         <option value="sv-SE">Svenska</option>
         <option value="en-US">English</option>
         <option value="de-DE">Deutsch</option>
+        <option value="es-ES">Español</option>
+        <option value="ar-SA">العربية</option>
       </select>
     </div>
   </div>
@@ -676,7 +678,7 @@ async function correctWithClaude(rawText) {
   if (!apiKey) { showToast('Lisää ensin Claude API-avain.'); return; }
   if (!rawText.trim()) return;
   lastCorrected = rawText;
-  const langNames = { 'fi-FI': 'suomi', 'sv-SE': 'ruotsi', 'en-US': 'englanti', 'de-DE': 'saksa' };
+  const langNames = { 'fi-FI': 'suomi', 'sv-SE': 'ruotsi', 'en-US': 'englanti', 'de-DE': 'saksa', 'es-ES': 'espanja', 'ar-SA': 'arabia' };
   const langName = langNames[document.getElementById('langSelect').value] || 'suomi';
   document.getElementById('processingIndicator').classList.add('visible');
   setCorrectedText('', true);
