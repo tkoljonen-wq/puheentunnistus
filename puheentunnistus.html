@@ -514,10 +514,10 @@ h1 em {
     <div class="translation-bar" id="translationBar">
       <span class="section-label" style="font-size:0.68rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);">Käännä</span>
       <div class="trans-btns">
-        <button class="btn-lang" onclick="translate('en', this)">🇬🇧 Englanti</button>
-        <button class="btn-lang" onclick="translate('es', this)">🇪🇸 Espanja</button>
-        <button class="btn-lang" onclick="translate('sv', this)">🇸🇪 Ruotsi</button>
-        <button class="btn-lang" onclick="translate('ar', this)">🇸🇦 Arabia</button>
+        <button class="btn-lang" onclick="kaanna('en', this)">🇬🇧 Englanti</button>
+        <button class="btn-lang" onclick="kaanna('es', this)">🇪🇸 Espanja</button>
+        <button class="btn-lang" onclick="kaanna('sv', this)">🇸🇪 Ruotsi</button>
+        <button class="btn-lang" onclick="kaanna('ar', this)">🇸🇦 Arabia</button>
       </div>
     </div>
 
@@ -716,7 +716,7 @@ function setCorrectedText(text, loading) {
   else { el.classList.add('empty'); el.textContent = 'Korjattu teksti ilmestyy tähän...'; }
 }
 
-async function translate(targetLang, btn) {
+async function kaanna(targetLang, btn) {
   const sourceEl = document.getElementById('correctedText');
   const sourceText = sourceEl.textContent;
   showToast('DEBUG: teksti="' + sourceText.substring(0,20) + '" empty=' + sourceEl.classList.contains('empty'));
