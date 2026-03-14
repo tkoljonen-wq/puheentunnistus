@@ -529,6 +529,7 @@ h1 em {
     <div class="translation-bar" id="translationBar">
       <span class="section-label" style="font-size:0.68rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);">Käännä</span>
       <div class="trans-btns">
+        <button class="btn-lang" onclick="kaanna('fi', this)">🇫🇮 Suomi</button>
         <button class="btn-lang" onclick="kaanna('en', this)">🇬🇧 Englanti</button>
         <button class="btn-lang" onclick="kaanna('es', this)">🇪🇸 Espanja</button>
         <button class="btn-lang" onclick="kaanna('sv', this)">🇸🇪 Ruotsi</button>
@@ -741,7 +742,7 @@ async function kaanna(targetLang, btn) {
   }
   if (!apiKey) { showToast('Lisää ensin Claude API-avain.'); return; }
 
-  const langNames = { en: 'englanti', es: 'espanja', sv: 'ruotsi', ar: 'arabia' };
+  const langNames = { fi: 'suomi', en: 'englanti', es: 'espanja', sv: 'ruotsi', ar: 'arabia' };
   const langNameFi = langNames[targetLang];
 
   // Merkitse aktiivinen kielinappi
