@@ -706,7 +706,7 @@ async function correctWithClaude(rawText) {
   const langName = langNames[document.getElementById('langSelect').value] || 'suomi';
   document.getElementById('processingIndicator').classList.add('visible');
   setCorrectedText('', true);
-  const systemPrompt = `Olet puheentunnistustekstin korjaaja. Tehtäväsi:\n1. Korjaa kuulovirheet ja puheentunnistuksen virheet\n2. Lisää välimerkit (pisteet, pilkut, kysymysmerkit, huutomerkit)\n3. Korjaa isot alkukirjaimet (lauseiden alut, erisnimet)\n4. Korjaa kirjoitusvirheet\n5. Säilytä alkuperäinen merkitys — älä lisää tai poista sanoja tarpeettomasti\n\nKieli: ${langName}. Vastaa VAIN korjatulla tekstillä, ei mitään muuta.`;
+  const systemPrompt = `Olet puheentunnistustekstin korjaaja. Tehtäväsi:\n1. Korjaa puheentunnistimen tekemät kuulovirheet ja tunnistusvirheet\n2. Lisää välimerkit (pisteet, pilkut, kysymysmerkit, huutomerkit)\n3. Korjaa isot alkukirjaimet (lauseiden alut, erisnimet)\n4. SÄILYTÄ puhekieli, murre ja arkikielen ilmaisut sellaisenaan — älä muuta niitä kirjakieleksi\n5. Älä lisää tai poista sanoja\n\nKieli: ${langName}. Vastaa VAIN korjatulla tekstillä, ei mitään muuta.`;
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
