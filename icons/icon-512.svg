@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="80" fill="#f5f0e8"/>
+  <rect width="512" height="512" rx="80" fill="url(#grad)" opacity="0.4"/>
+  <defs>
+    <radialGradient id="grad" cx="25%" cy="0%" r="70%">
+      <stop offset="0%" stop-color="#c0392b" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#f5f0e8" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <!-- Microphone body -->
+  <rect x="212" y="88" width="88" height="152" rx="44" fill="#c0392b"/>
+  <!-- Microphone stand arc -->
+  <path d="M152 248 Q152 336 256 336 Q360 336 360 248" fill="none" stroke="#1a1610" stroke-width="18" stroke-linecap="round"/>
+  <!-- Stand pole -->
+  <line x1="256" y1="336" x2="256" y2="392" stroke="#1a1610" stroke-width="18" stroke-linecap="round"/>
+  <!-- Stand base -->
+  <line x1="192" y1="392" x2="320" y2="392" stroke="#1a1610" stroke-width="18" stroke-linecap="round"/>
+  <!-- Text lines suggesting transcription -->
+  <rect x="136" y="424" width="240" height="14" rx="7" fill="#c8bfad"/>
+  <rect x="168" y="448" width="176" height="14" rx="7" fill="#c8bfad"/>
+</svg>

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Full bleed background — no padding, safe zone is inner 80% (approx 102px each side) -->
+  <rect width="512" height="512" fill="#f5f0e8"/>
+  <rect width="512" height="512" fill="url(#grad)" opacity="0.4"/>
+  <defs>
+    <radialGradient id="grad" cx="25%" cy="0%" r="70%">
+      <stop offset="0%" stop-color="#c0392b" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#f5f0e8" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <!-- Content centered within safe zone (102–410) -->
+  <!-- Microphone body -->
+  <rect x="218" y="108" width="76" height="132" rx="38" fill="#c0392b"/>
+  <!-- Microphone stand arc -->
+  <path d="M166 240 Q166 312 256 312 Q346 312 346 240" fill="none" stroke="#1a1610" stroke-width="16" stroke-linecap="round"/>
+  <!-- Stand pole -->
+  <line x1="256" y1="312" x2="256" y2="360" stroke="#1a1610" stroke-width="16" stroke-linecap="round"/>
+  <!-- Stand base -->
+  <line x1="200" y1="360" x2="312" y2="360" stroke="#1a1610" stroke-width="16" stroke-linecap="round"/>
+  <!-- Text lines -->
+  <rect x="152" y="390" width="208" height="12" rx="6" fill="#c8bfad"/>
+  <rect x="178" y="412" width="156" height="12" rx="6" fill="#c8bfad"/>
+</svg>
